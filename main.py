@@ -1,8 +1,8 @@
 import sys
-from datetime import date
 
 from datetime import date, time
 from PyQt6.QtWidgets import QApplication, QMainWindow
+from PyQt6.QtCore import QDate, QTime
 from PyQt6.QtWidgets import QTreeWidgetItem
 from cinemas import CinemaNet, Cinema, Hall, IncorrectTimeRangeError, TimeRangeIntersectionError
 from ex import Ui_MainWindow
@@ -12,6 +12,7 @@ class Cinemas(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
+        self.date_edit.setDate(QDate.currentDate())
         self.warning_session_label.setStyleSheet('color: red')
 
         self.cinema_net = CinemaNet('Кинотеатры')
@@ -157,15 +158,28 @@ class Cinemas(QMainWindow, Ui_MainWindow):
                     cinema.add_hall(hall)
                     self.hide_warning_message()
                     self.update_tree()
+                    self.clear_form()
 
         elif cinema and hall:
             self.cinema_net.add_cinema(cinema)
             cinema.add_hall(hall)
             self.update_tree()
+            self.clear_form()
 
         elif cinema:
             self.cinema_net.add_cinema(cinema)
             self.update_tree()
+            self.clear_form()
+
+    def clear_form(self):
+        self.cinema_edit.clear()
+        self.hall_edit.clear()
+        self.session_edit.clear()
+        self.width_spin_box.setValue(1)
+        self.length_spin_box.setValue(1)
+        self.date_edit.setDate(QDate.currentDate())
+        self.start_time_edit.setTime(QTime(0, 0))
+        self.end_time_edit.setTime(QTime(0, 0))
 
     def update_tree(self):
         self.cinemas_tree.clear()
