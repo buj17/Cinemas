@@ -1,9 +1,10 @@
 import sys
 from datetime import date
 
+from datetime import date, time
 from PyQt6.QtWidgets import QApplication, QMainWindow
 from PyQt6.QtWidgets import QTreeWidgetItem
-from cinemas import CinemaNet, Cinema, Hall
+from cinemas import CinemaNet, Cinema, Hall, IncorrectTimeRangeError, TimeRangeIntersectionError
 from ex import Ui_MainWindow
 
 
@@ -11,6 +12,8 @@ class Cinemas(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
+        self.warning_session_label.setStyleSheet('color: red')
+
         self.cinema_net = CinemaNet('Кинотеатры')
 
         self.cinema_edit.textChanged.connect(self.block_unblock_hall_edit)
@@ -117,7 +120,6 @@ class Cinemas(QMainWindow, Ui_MainWindow):
                 cinema = self.cinema_net.get_cinema(cinema_name)
             else:
                 cinema = Cinema(cinema_name)
-                self.cinema_net.add_cinema(cinema)
         else:
             cinema = None
 
@@ -126,18 +128,44 @@ class Cinemas(QMainWindow, Ui_MainWindow):
                 hall = cinema.get_hall(hall_name)
             else:
                 hall = Hall(hall_name, hall_length, hall_width)
-                cinema.add_hall(hall)
         else:
             hall = None
 
+        self.create_objects(cinema, hall, session_name, session_start_time, session_end_time, session_date)
+
+    def create_objects(self,
+                       cinema: Cinema | None,
+                       hall: Hall | None,
+                       session_name: str | None,
+                       session_start_time: time | None,
+                       session_end_time: time | None,
+                       session_date: date | None):
         if session_name:
+            hall: Hall
+
             if session_name not in hall.get_sessions():
                 try:
-                    hall.add_session(session_name, session_start_time, session_end_time)
-                except Exception as err:
-                    print(type(err))
+                    hall.add_session(session_name, session_start_time, session_end_time, session_date)
+                except IncorrectTimeRangeError:
+                    self.show_warning_message('Время начала должно быть меньше времени конца')
+                    return None
+                except TimeRangeIntersectionError:
+                    self.show_warning_message('Время данного сеанса пересекается с другим')
+                    return None
+                else:
+                    self.cinema_net.add_cinema(cinema)
+                    cinema.add_hall(hall)
+                    self.hide_warning_message()
+                    self.update_tree()
 
-        self.update_tree()
+        elif cinema and hall:
+            self.cinema_net.add_cinema(cinema)
+            cinema.add_hall(hall)
+            self.update_tree()
+
+        elif cinema:
+            self.cinema_net.add_cinema(cinema)
+            self.update_tree()
 
     def update_tree(self):
         self.cinemas_tree.clear()
@@ -161,11 +189,10 @@ class Cinemas(QMainWindow, Ui_MainWindow):
                     session_tree_item.setText(0, session_text)
 
     def show_warning_message(self, text):
-        pass
+        self.warning_session_label.setText(text)
 
     def hide_warning_message(self):
         self.warning_session_label.setText('')
-        self.warning_session_label.hide()
 
 
 if __name__ == '__main__':

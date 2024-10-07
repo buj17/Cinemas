@@ -1,4 +1,4 @@
-from datetime import time
+from datetime import time, date
 
 
 class IncorrectTimeRangeError(Exception):
@@ -24,7 +24,7 @@ class Seat:
 
 
 class Session:
-    def __init__(self, name: str, hall_length: int, hall_width: int, start_time: time, end_time: time):
+    def __init__(self, name: str, hall_length: int, hall_width: int, start_time: time, end_time: time, day: date):
         """Будем считать что для каждой сессии зал, в котором эта сессия проходит, будет отдельной сущностью,
         т.е сам зал хранит только информацию о своем размере, а матрица с местами у каждой сессии отдельная"""
         if start_time >= end_time:
@@ -35,6 +35,7 @@ class Session:
         self.name = name
         self.start_time = start_time
         self.end_time = end_time
+        self.day = day
 
     def get_seat(self, row, col):
         return self.seat_matrix[row - 1][col - 1]
@@ -83,14 +84,15 @@ class Hall:
         self.hall_name = hall_name
         self.sessions = {}
 
-    def add_session(self, session_name: str, start_time: time, end_time: time):
+    def add_session(self, session_name: str, start_time: time, end_time: time, day: date):
         for session in self.sessions.values():
             session: Session
-            if (session.get_start_time() < start_time < session.get_end_time() or
-                    session.get_start_time() < end_time < session.get_end_time()):
+            if (session.get_start_time() <= start_time <= session.get_end_time() or
+                    session.get_start_time() <= end_time <= session.get_end_time()):
                 raise TimeRangeIntersectionError
 
-        self.sessions.setdefault(session_name, Session(session_name, self.length, self.width, start_time, end_time))
+        self.sessions.setdefault(session_name,
+                                 Session(session_name, self.length, self.width, start_time, end_time, day))
 
     def del_session(self, session_name: str):
         del self.sessions[session_name]
