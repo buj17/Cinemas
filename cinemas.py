@@ -40,6 +40,9 @@ class Session:
     def get_seat(self, row, col):
         return self.seat_matrix[row - 1][col - 1]
 
+    def get_seat_matrix(self):
+        return self.seat_matrix
+
     def is_taken(self, row, col):
         return self.get_seat(row, col).is_taken()
 
