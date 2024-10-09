@@ -1,8 +1,8 @@
 import sys
-
 from datetime import date, time
-from PyQt6.QtWidgets import QApplication, QMainWindow
+
 from PyQt6.QtCore import QDate, QTime
+from PyQt6.QtWidgets import QApplication, QMainWindow
 from PyQt6.QtWidgets import QTreeWidgetItem
 from cinemas import CinemaNet, Cinema, Hall, IncorrectTimeRangeError, TimeRangeIntersectionError
 from ex import Ui_MainWindow
@@ -14,6 +14,9 @@ class Cinemas(QMainWindow, Ui_MainWindow):
         self.setupUi(self)
         self.date_edit.setDate(QDate.currentDate())
         self.warning_session_label.setStyleSheet('color: red')
+        self.existing_cinema_in_edit = None
+        self.existing_hall_in_edit = None
+        self.existing_session_in_edit = None
 
         self.cinema_net = CinemaNet('Кинотеатры')
 
@@ -24,6 +27,16 @@ class Cinemas(QMainWindow, Ui_MainWindow):
         self.session_edit.textChanged.connect(self.block_unblock_session_params)
 
         self.create_button.clicked.connect(self.add_items)
+
+        self.cinema_combo_box.currentIndexChanged.connect(self.update_hall_combo_box)
+
+        self.hall_combo_box.currentIndexChanged.connect(self.update_session_combo_box)
+
+        self.delete_cinema_button.clicked.connect(self.delete_cinema)
+
+        self.delete_hall_button.clicked.connect(self.delete_hall)
+
+        self.delete_session_button.clicked.connect(self.delete_session)
 
     def block_unblock_hall_edit(self):
         if self.cinema_edit.text():
@@ -158,20 +171,23 @@ class Cinemas(QMainWindow, Ui_MainWindow):
                     cinema.add_hall(hall)
                     self.hide_warning_message()
                     self.update_tree()
-                    self.clear_form()
+                    self.update_cinema_combo_box()
+                    self.clear_add_form()
 
         elif cinema and hall:
             self.cinema_net.add_cinema(cinema)
             cinema.add_hall(hall)
             self.update_tree()
-            self.clear_form()
+            self.update_cinema_combo_box()
+            self.clear_add_form()
 
         elif cinema:
             self.cinema_net.add_cinema(cinema)
             self.update_tree()
-            self.clear_form()
+            self.update_cinema_combo_box()
+            self.clear_add_form()
 
-    def clear_form(self):
+    def clear_add_form(self):
         self.cinema_edit.clear()
         self.hall_edit.clear()
         self.session_edit.clear()
@@ -208,9 +224,94 @@ class Cinemas(QMainWindow, Ui_MainWindow):
     def hide_warning_message(self):
         self.warning_session_label.setText('')
 
+    def update_cinema_combo_box(self):
+        self.cinema_combo_box.clear()
+        for cinema_name in self.cinema_net.get_cinemas():
+            self.cinema_combo_box.addItem(cinema_name)
+
+    def update_hall_combo_box(self):
+        self.hall_combo_box.clear()
+        try:
+            cinema = self.cinema_net.get_cinema(self.cinema_combo_box.currentText())
+        except KeyError:
+            self.hall_combo_box.setDisabled(True)
+            self.delete_hall_button.setDisabled(True)
+            return None
+
+        halls = cinema.get_halls()
+        for hall_name in halls:
+            self.hall_combo_box.addItem(hall_name)
+
+        if self.hall_combo_box.currentText():
+            self.hall_combo_box.setEnabled(True)
+            self.delete_hall_button.setEnabled(True)
+        else:
+            self.hall_combo_box.setDisabled(True)
+            self.delete_hall_button.setDisabled(True)
+
+    def update_session_combo_box(self):
+        self.session_combo_box.clear()
+        try:
+            cinema = self.cinema_net.get_cinema(self.cinema_combo_box.currentText())
+            hall = cinema.get_hall(self.hall_combo_box.currentText())
+        except KeyError:
+            self.session_combo_box.setDisabled(True)
+            self.go_to_session_button.setDisabled(True)
+            self.delete_session_button.setDisabled(True)
+            return None
+
+        sessions = hall.get_sessions()
+        for session_name in sessions:
+            self.session_combo_box.addItem(session_name)
+
+        if self.session_combo_box.currentText():
+            self.session_combo_box.setEnabled(True)
+            self.go_to_session_button.setEnabled(True)
+            self.delete_session_button.setEnabled(True)
+        else:
+            self.session_combo_box.setDisabled(True)
+            self.go_to_session_button.setDisabled(True)
+            self.delete_session_button.setDefault(True)
+
+    def update_all_combo_boxes(self):
+        self.update_cinema_combo_box()
+        self.update_hall_combo_box()
+        self.update_session_combo_box()
+
+    def delete_cinema(self):
+        cinema_name = self.cinema_combo_box.currentText()
+        if cinema_name:
+            self.cinema_net.del_cinema(cinema_name)
+            self.update_tree()
+            self.update_all_combo_boxes()
+
+    def delete_hall(self):
+        hall_name = self.hall_combo_box.currentText()
+        if hall_name:
+            cinema = self.cinema_net.get_cinema(self.cinema_combo_box.currentText())
+            cinema.del_hall(hall_name)
+            self.update_tree()
+            self.update_all_combo_boxes()
+
+    def delete_session(self):
+        session_name = self.session_combo_box.currentText()
+        if session_name:
+            cinema = self.cinema_net.get_cinema(self.cinema_combo_box.currentText())
+            hall = cinema.get_hall(self.hall_combo_box.currentText())
+            hall.del_session(session_name)
+            self.update_tree()
+            self.update_all_combo_boxes()
+
+
+
+
+def except_hook(cls, exception, traceback):
+    sys.__excepthook__(cls, exception, traceback)
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     ex = Cinemas()
     ex.show()
+    sys.excepthook = except_hook
     sys.exit(app.exec())
