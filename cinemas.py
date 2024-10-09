@@ -159,11 +159,3 @@ class CinemaNet:
 
     def __repr__(self):
         return f'CinemaNet("{self.name}")'
-
-
-if __name__ == '__main__':
-    hall = Hall('A', 10, 10)
-    hall.del_session('1')
-    hall.add_session('1', time(14), time(16))
-    print(repr(hall.get_session('1')))
-    # hall.add_session('1', time(14), time(16))
