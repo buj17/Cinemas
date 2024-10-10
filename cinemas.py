@@ -61,6 +61,9 @@ class Session:
     def get_end_time(self):
         return self.end_time
 
+    def get_day(self):
+        return self.day
+
     def __str__(self):
         res = '   '
         cols_s = ''.join(map(lambda x: str(x).rjust(3), range(1, self.hall_length + 1)))

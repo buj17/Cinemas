@@ -1,6 +1,7 @@
 from datetime import date, time
 
 from CinemasUi import Ui_MainWindow
+from FileTools import create_schedule
 from PyQt6.QtCore import QDate, QTime
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QMainWindow
@@ -13,10 +14,10 @@ class Cinemas(QMainWindow, Ui_MainWindow):
         super().__init__()
         self.setupUi(self)
         self.date = self.date_edit.setDate(QDate.currentDate())
+        self.schedule_start_date.setDate(QDate.currentDate())
+        self.schedule_end_date.setDate(QDate.currentDate())
         self.warning_session_label.setStyleSheet('color: red')
-        self.existing_cinema_in_edit = None
-        self.existing_hall_in_edit = None
-        self.existing_session_in_edit = None
+        self.warning_schedule_label.setStyleSheet('color: red')
 
         self.cinema_net = CinemaNet('Кинотеатры')
 
@@ -39,6 +40,8 @@ class Cinemas(QMainWindow, Ui_MainWindow):
         self.delete_session_button.clicked.connect(self.delete_session)
 
         self.go_to_session_button.clicked.connect(self.show_session_config_window)
+
+        self.create_schedule_button.clicked.connect(self.create_schedule)
 
     def block_unblock_hall_edit(self):
         if self.cinema_edit.text():
@@ -163,15 +166,15 @@ class Cinemas(QMainWindow, Ui_MainWindow):
                 try:
                     hall.add_session(session_name, session_start_time, session_end_time, session_date)
                 except IncorrectTimeRangeError:
-                    self.show_warning_message('Время начала должно быть меньше времени конца')
+                    self.show_warning_add_message('Время начала должно быть меньше времени конца')
                     return None
                 except TimeRangeIntersectionError:
-                    self.show_warning_message('Время данного сеанса пересекается с другим')
+                    self.show_warning_add_message('Время данного сеанса пересекается с другим')
                     return None
                 else:
                     self.cinema_net.add_cinema(cinema)
                     cinema.add_hall(hall)
-                    self.hide_warning_message()
+                    self.hide_warning_add_message()
                     self.update_tree()
                     self.update_cinema_combo_box()
                     self.clear_add_form()
@@ -220,10 +223,10 @@ class Cinemas(QMainWindow, Ui_MainWindow):
                     session_text = session.get_name()
                     session_tree_item.setText(0, session_text)
 
-    def show_warning_message(self, text):
+    def show_warning_add_message(self, text):
         self.warning_session_label.setText(text)
 
-    def hide_warning_message(self):
+    def hide_warning_add_message(self):
         self.warning_session_label.setText('')
 
     def update_cinema_combo_box(self):
@@ -313,8 +316,22 @@ class Cinemas(QMainWindow, Ui_MainWindow):
         self.session_config_window.setWindowModality(Qt.WindowModality.ApplicationModal)
         self.session_config_window.show()
 
-    def f(self):
-        print('a')
+    def show_warning_schedule_message(self, text):
+        self.warning_schedule_label.setText(text)
+
+    def hide_warning_schedule_message(self):
+        self.warning_schedule_label.setText('')
+
+    def create_schedule(self):
+        start_date = self.schedule_start_date.date().toPyDate()
+        end_date = self.schedule_end_date.date().toPyDate()
+
+        if start_date > end_date:
+            self.show_warning_schedule_message("Начальная дата больше конечной")
+        else:
+            self.hide_warning_schedule_message()
+
+        create_schedule(self.cinema_net, start_date, end_date)
 
 
 class SessionConfigWindow(QWidget):
