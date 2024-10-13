@@ -1,8 +1,6 @@
-from datetime import date, time
-
 from CinemasUi import Ui_MainWindow
 from FileTools import create_schedule
-from PyQt6.QtCore import QDate, QTime
+from PyQt6.QtCore import QDate
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QMainWindow
 from PyQt6.QtWidgets import QWidget, QTreeWidgetItem, QPushButton, QLabel
@@ -21,186 +19,131 @@ class Cinemas(QMainWindow, Ui_MainWindow):
 
         self.cinema_net = CinemaNet('Кинотеатры')
 
-        self.cinema_edit.textChanged.connect(self.block_unblock_hall_edit)
+        self.cinema_edit.textChanged.connect(self.toggle_add_cinema_button)
+        self.add_cinema_button.clicked.connect(self.add_cinema)
 
-        self.hall_edit.textChanged.connect(self.block_unblock_session_line)
+        self.hall_form_cinema_combo_box.currentTextChanged.connect(self.toggle_hall_edit)
+        self.hall_edit.textChanged.connect(self.toggle_hall_params)
+        self.add_hall_button.clicked.connect(self.add_hall)
 
-        self.session_edit.textChanged.connect(self.block_unblock_session_params)
+        self.session_form_cinema_combo_box.currentTextChanged.connect(self._update_session_form_hall_combo_box)
+        self.session_form_hall_combo_box.currentTextChanged.connect(self.toggle_session_edit)
+        self.session_edit.textChanged.connect(self.toggle_session_params)
+        self.add_session_button.clicked.connect(self.add_session)
 
-        self.create_button.clicked.connect(self.add_items)
+        # self.create_button.clicked.connect(self.add_items)
 
-        self.cinema_combo_box.currentIndexChanged.connect(self.update_hall_combo_box)
-
+        self.cinema_combo_box.currentIndexChanged.connect(self._update_hall_combo_box)
         self.hall_combo_box.currentIndexChanged.connect(self.update_session_combo_box)
-
         self.delete_cinema_button.clicked.connect(self.delete_cinema)
-
         self.delete_hall_button.clicked.connect(self.delete_hall)
-
         self.delete_session_button.clicked.connect(self.delete_session)
-
         self.go_to_session_button.clicked.connect(self.show_session_config_window)
 
         self.create_schedule_button.clicked.connect(self.create_schedule)
 
-    def block_unblock_hall_edit(self):
-        if self.cinema_edit.text():
-            self._unblock_hall_edit()
-            if self.hall_edit.text():
-                self._unblock_session_edit()
+    def toggle_add_cinema_button(self):
+        text = self.cinema_edit.text()
+        if text and ' '.join(('Кинотеатр', text)) not in self.cinema_net.get_cinemas():
+            self.add_cinema_button.setEnabled(True)
         else:
-            self._block_hall_edit()
-            self._block_session_edit()
+            self.add_cinema_button.setDisabled(True)
 
-    def block_unblock_session_line(self):
-        if self.hall_edit.text():
-            self._unblock_session_line()
-            if self.session_edit.text():
-                self._unblock_session_params()
+    def clear_cinema_form(self):
+        self.cinema_edit.clear()
+
+    def add_cinema(self):
+        text = self.cinema_edit.text()
+        if text and ' '.join(('Кинотеатр', text)) not in self.cinema_net.get_cinemas():
+            cinema = Cinema(' '.join(('Кинотеатр', text)))
+            self.cinema_net.add_cinema(cinema)
+            self.clear_cinema_form()
+            self.update_tree()
+            self.update_cinema_combo_boxes()
+
+    def toggle_hall_edit(self):
+        text = self.hall_form_cinema_combo_box.currentText()
+        if text:
+            self.hall_edit.setEnabled(True)
         else:
-            self._block_session_line()
-            self._block_session_params()
+            self.hall_edit.setDisabled(True)
 
-    def block_unblock_session_params(self):
-        if self.session_edit.text():
-            self._unblock_session_params()
+    def toggle_hall_params(self):
+        text = self.hall_edit.text()
+        current_cinema: Cinema = self.cinema_net.get_cinema(self.hall_form_cinema_combo_box.currentText())
+
+        if text and ' '.join(('Зал', text)) not in current_cinema.get_halls():
+            self.length_spin_box.setEnabled(True)
+            self.width_spin_box.setEnabled(True)
+            self.add_hall_button.setEnabled(True)
         else:
-            self._block_session_params()
+            self.length_spin_box.setDisabled(True)
+            self.width_spin_box.setDisabled(True)
+            self.add_hall_button.setDisabled(True)
 
-    def _block_hall_line(self):
-        self.hall_edit.setDisabled(True)
+    def clear_hall_form(self):
+        self.hall_edit.clear()
 
-    def _block_hall_params(self):
-        self.length_spin_box.setDisabled(True)
-        self.width_spin_box.setDisabled(True)
-
-    def _block_hall_edit(self):
-        self._block_hall_line()
-        self._block_hall_params()
-
-    def _unblock_hall_line(self):
-        self.hall_edit.setEnabled(True)
-
-    def _unblock_hall_params(self):
-        self.length_spin_box.setEnabled(True)
-        self.width_spin_box.setEnabled(True)
-
-    def _unblock_hall_edit(self):
-        self._unblock_hall_line()
-        self._unblock_hall_params()
-
-    def _block_session_line(self):
-        self.session_edit.setDisabled(True)
-
-    def _block_session_params(self):
-        self.date_edit.setDisabled(True)
-        self.start_time_edit.setDisabled(True)
-        self.end_time_edit.setDisabled(True)
-
-    def _block_session_edit(self):
-        self._block_session_line()
-        self._block_session_params()
-
-    def _unblock_session_line(self):
-        self.session_edit.setEnabled(True)
-
-    def _unblock_session_params(self):
-        self.date_edit.setEnabled(True)
-        self.start_time_edit.setEnabled(True)
-        self.end_time_edit.setEnabled(True)
-
-    def _unblock_session_edit(self):
-        self._unblock_session_line()
-        self._unblock_session_params()
-
-    def add_items(self):
-        if self.cinema_edit.text():
-            cinema_name = ' '.join(('Кинотеатр', self.cinema_edit.text()))
-        else:
-            cinema_name = None
-
-        if self.hall_edit.isEnabled() and self.hall_edit.text():
-            hall_name = ' '.join(('Зал', self.hall_edit.text()))
+    def add_hall(self):
+        text = self.hall_edit.text()
+        current_cinema: Cinema = self.cinema_net.get_cinema(self.hall_form_cinema_combo_box.currentText())
+        if text and ' '.join(('Зал', text)) not in current_cinema.get_halls():
             hall_length = self.length_spin_box.value()
             hall_width = self.width_spin_box.value()
-        else:
-            hall_name = hall_length = hall_width = None
+            hall = Hall(' '.join(('Зал', text)), hall_length, hall_width)
+            current_cinema.add_hall(hall)
+            self.clear_hall_form()
+            self.update_tree()
+            self.update_hall_combo_boxes()
 
-        if self.session_edit.isEnabled() and self.session_edit.text():
-            session_name = ' '.join(('Сеанс', self.session_edit.text()))
-            session_date = date(*self.date_edit.date().getDate())
+    def toggle_session_edit(self):
+        text = self.session_form_hall_combo_box.currentText()
+        if text:
+            self.session_edit.setEnabled(True)
+        else:
+            self.session_edit.setDisabled(True)
+
+    def toggle_session_params(self):
+        text = self.session_edit.text()
+        current_cinema: Cinema = self.cinema_net.get_cinema(self.session_form_cinema_combo_box.currentText())
+        current_hall: Hall = current_cinema.get_hall(self.session_form_hall_combo_box.currentText())
+
+        if text and ' '.join(('Сеанс', text)) not in current_hall.get_sessions():
+            self.date_edit.setEnabled(True)
+            self.start_time_edit.setEnabled(True)
+            self.end_time_edit.setEnabled(True)
+            self.add_session_button.setEnabled(True)
+        else:
+            self.date_edit.setDisabled(True)
+            self.start_time_edit.setDisabled(True)
+            self.end_time_edit.setDisabled(True)
+            self.add_session_button.setDisabled(True)
+
+    def add_session(self):
+        text = self.session_edit.text()
+        current_cinema: Cinema = self.cinema_net.get_cinema(self.session_form_cinema_combo_box.currentText())
+        current_hall: Hall = current_cinema.get_hall(self.session_form_hall_combo_box.currentText())
+
+        if text and ' '.join(('Сеанс', text)) not in current_hall.get_sessions():
+            session_day = self.date_edit.date().toPyDate()
             session_start_time = self.start_time_edit.time().toPyTime()
             session_end_time = self.end_time_edit.time().toPyTime()
-        else:
-            session_name = session_date = session_start_time = session_end_time = None
-
-        if cinema_name:
-            if cinema_name in self.cinema_net.get_cinemas():
-                cinema = self.cinema_net.get_cinema(cinema_name)
+            try:
+                current_hall.add_session(' '.join(('Сеанс', text)), session_start_time, session_end_time, session_day)
+            except IncorrectTimeRangeError:
+                self.show_warning_add_message('Время начала должно быть меньше времени конца')
+                return None
+            except TimeRangeIntersectionError:
+                self.show_warning_add_message('Время данного сеанса пересекается с другим')
+                return None
             else:
-                cinema = Cinema(cinema_name)
-        else:
-            cinema = None
+                self.hide_warning_add_message()
+                self.clear_session_form()
+                self.update_tree()
+                self.update_session_combo_box()
 
-        if hall_name:
-            if hall_name in cinema.get_halls():
-                hall = cinema.get_hall(hall_name)
-            else:
-                hall = Hall(hall_name, hall_length, hall_width)
-        else:
-            hall = None
-
-        self.create_objects(cinema, hall, session_name, session_start_time, session_end_time, session_date)
-
-    def create_objects(self,
-                       cinema: Cinema | None,
-                       hall: Hall | None,
-                       session_name: str | None,
-                       session_start_time: time | None,
-                       session_end_time: time | None,
-                       session_date: date | None):
-        if session_name:
-            hall: Hall
-
-            if session_name not in hall.get_sessions():
-                try:
-                    hall.add_session(session_name, session_start_time, session_end_time, session_date)
-                except IncorrectTimeRangeError:
-                    self.show_warning_add_message('Время начала должно быть меньше времени конца')
-                    return None
-                except TimeRangeIntersectionError:
-                    self.show_warning_add_message('Время данного сеанса пересекается с другим')
-                    return None
-                else:
-                    self.cinema_net.add_cinema(cinema)
-                    cinema.add_hall(hall)
-                    self.hide_warning_add_message()
-                    self.update_tree()
-                    self.update_cinema_combo_box()
-                    self.clear_add_form()
-
-        elif cinema and hall:
-            self.cinema_net.add_cinema(cinema)
-            cinema.add_hall(hall)
-            self.update_tree()
-            self.update_cinema_combo_box()
-            self.clear_add_form()
-
-        elif cinema:
-            self.cinema_net.add_cinema(cinema)
-            self.update_tree()
-            self.update_cinema_combo_box()
-            self.clear_add_form()
-
-    def clear_add_form(self):
-        self.cinema_edit.clear()
-        self.hall_edit.clear()
+    def clear_session_form(self):
         self.session_edit.clear()
-        self.width_spin_box.setValue(1)
-        self.length_spin_box.setValue(1)
-        self.date_edit.setDate(QDate.currentDate())
-        self.start_time_edit.setTime(QTime(0, 0))
-        self.end_time_edit.setTime(QTime(0, 0))
 
     def update_tree(self):
         self.cinemas_tree.clear()
@@ -229,12 +172,31 @@ class Cinemas(QMainWindow, Ui_MainWindow):
     def hide_warning_add_message(self):
         self.warning_session_label.setText('')
 
-    def update_cinema_combo_box(self):
+    def update_cinema_combo_boxes(self):
+        self._update_cinema_combo_box()
+        self._update_hall_form_cinema_combo_box()
+        self._update_session_form_cinema_combo_box()
+
+    def _update_cinema_combo_box(self):
         self.cinema_combo_box.clear()
         for cinema_name in self.cinema_net.get_cinemas():
             self.cinema_combo_box.addItem(cinema_name)
 
-    def update_hall_combo_box(self):
+    def _update_hall_form_cinema_combo_box(self):
+        self.hall_form_cinema_combo_box.clear()
+        for cinema_name in self.cinema_net.get_cinemas():
+            self.hall_form_cinema_combo_box.addItem(cinema_name)
+
+    def _update_session_form_cinema_combo_box(self):
+        self.session_form_cinema_combo_box.clear()
+        for cinema_name in self.cinema_net.get_cinemas():
+            self.session_form_cinema_combo_box.addItem(cinema_name)
+
+    def update_hall_combo_boxes(self):
+        self._update_hall_combo_box()
+        self._update_session_form_hall_combo_box()
+
+    def _update_hall_combo_box(self):
         self.hall_combo_box.clear()
         try:
             cinema = self.cinema_net.get_cinema(self.cinema_combo_box.currentText())
@@ -253,6 +215,23 @@ class Cinemas(QMainWindow, Ui_MainWindow):
         else:
             self.hall_combo_box.setDisabled(True)
             self.delete_hall_button.setDisabled(True)
+
+    def _update_session_form_hall_combo_box(self):
+        self.session_form_hall_combo_box.clear()
+        try:
+            cinema = self.cinema_net.get_cinema(self.session_form_cinema_combo_box.currentText())
+        except KeyError:
+            self.session_form_hall_combo_box.setDisabled(True)
+            return None
+
+        halls = cinema.get_halls()
+        for hall_name in halls:
+            self.session_form_hall_combo_box.addItem(hall_name)
+
+        if self.session_form_hall_combo_box.currentText():
+            self.session_form_hall_combo_box.setEnabled(True)
+        else:
+            self.session_form_hall_combo_box.setDisabled(True)
 
     def update_session_combo_box(self):
         self.session_combo_box.clear()
@@ -279,8 +258,8 @@ class Cinemas(QMainWindow, Ui_MainWindow):
             self.delete_session_button.setDefault(True)
 
     def update_all_combo_boxes(self):
-        self.update_cinema_combo_box()
-        self.update_hall_combo_box()
+        self.update_cinema_combo_boxes()
+        self._update_hall_combo_box()
         self.update_session_combo_box()
 
     def delete_cinema(self):

@@ -93,8 +93,9 @@ class Hall:
     def add_session(self, session_name: str, start_time: time, end_time: time, day: date):
         for session in self.sessions.values():
             session: Session
-            if (session.get_start_time() <= start_time <= session.get_end_time() or
-                    session.get_start_time() <= end_time <= session.get_end_time()):
+            if ((session.get_start_time() <= start_time <= session.get_end_time() or
+                 session.get_start_time() <= end_time <= session.get_end_time()) and
+                    session.day == day):
                 raise TimeRangeIntersectionError
 
         self.sessions.setdefault(session_name,
