@@ -44,7 +44,7 @@ class Cinemas(QMainWindow, Ui_MainWindow):
 
     def toggle_add_cinema_button(self):
         text = self.cinema_edit.text()
-        if text and ' '.join(('Кинотеатр', text)) not in self.cinema_net.get_cinemas():
+        if text and text not in self.cinema_net.get_cinemas():
             self.add_cinema_button.setEnabled(True)
         else:
             self.add_cinema_button.setDisabled(True)
@@ -54,8 +54,8 @@ class Cinemas(QMainWindow, Ui_MainWindow):
 
     def add_cinema(self):
         text = self.cinema_edit.text()
-        if text and ' '.join(('Кинотеатр', text)) not in self.cinema_net.get_cinemas():
-            cinema = Cinema(' '.join(('Кинотеатр', text)))
+        if text and text not in self.cinema_net.get_cinemas():
+            cinema = Cinema(text)
             self.cinema_net.add_cinema(cinema)
             self.clear_cinema_form()
             self.update_tree()
@@ -72,7 +72,7 @@ class Cinemas(QMainWindow, Ui_MainWindow):
         text = self.hall_edit.text()
         current_cinema: Cinema = self.cinema_net.get_cinema(self.hall_form_cinema_combo_box.currentText())
 
-        if text and ' '.join(('Зал', text)) not in current_cinema.get_halls():
+        if text and text not in current_cinema.get_halls():
             self.length_spin_box.setEnabled(True)
             self.width_spin_box.setEnabled(True)
             self.add_hall_button.setEnabled(True)
@@ -87,10 +87,10 @@ class Cinemas(QMainWindow, Ui_MainWindow):
     def add_hall(self):
         text = self.hall_edit.text()
         current_cinema: Cinema = self.cinema_net.get_cinema(self.hall_form_cinema_combo_box.currentText())
-        if text and ' '.join(('Зал', text)) not in current_cinema.get_halls():
+        if text and text not in current_cinema.get_halls():
             hall_length = self.length_spin_box.value()
             hall_width = self.width_spin_box.value()
-            hall = Hall(' '.join(('Зал', text)), hall_length, hall_width)
+            hall = Hall(text, hall_length, hall_width)
             current_cinema.add_hall(hall)
             self.clear_hall_form()
             self.update_tree()
@@ -108,7 +108,7 @@ class Cinemas(QMainWindow, Ui_MainWindow):
         current_cinema: Cinema = self.cinema_net.get_cinema(self.session_form_cinema_combo_box.currentText())
         current_hall: Hall = current_cinema.get_hall(self.session_form_hall_combo_box.currentText())
 
-        if text and ' '.join(('Сеанс', text)) not in current_hall.get_sessions():
+        if text and text not in current_hall.get_sessions():
             self.date_edit.setEnabled(True)
             self.start_time_edit.setEnabled(True)
             self.end_time_edit.setEnabled(True)
@@ -124,12 +124,12 @@ class Cinemas(QMainWindow, Ui_MainWindow):
         current_cinema: Cinema = self.cinema_net.get_cinema(self.session_form_cinema_combo_box.currentText())
         current_hall: Hall = current_cinema.get_hall(self.session_form_hall_combo_box.currentText())
 
-        if text and ' '.join(('Сеанс', text)) not in current_hall.get_sessions():
+        if text and text not in current_hall.get_sessions():
             session_day = self.date_edit.date().toPyDate()
             session_start_time = self.start_time_edit.time().toPyTime()
             session_end_time = self.end_time_edit.time().toPyTime()
             try:
-                current_hall.add_session(' '.join(('Сеанс', text)), session_start_time, session_end_time, session_day)
+                current_hall.add_session(text, session_start_time, session_end_time, session_day)
             except IncorrectTimeRangeError:
                 self.show_warning_add_message('Время начала должно быть меньше времени конца')
                 return None
@@ -151,19 +151,19 @@ class Cinemas(QMainWindow, Ui_MainWindow):
         for cinema_name in self.cinema_net.get_cinemas():
             cinema: Cinema = self.cinema_net.get_cinema(cinema_name)
             cinema_tree_item = QTreeWidgetItem(self.cinemas_tree)
-            cinema_text = cinema.get_name()
+            cinema_text = ' '.join(('Кинотеатр', cinema.get_name()))
             cinema_tree_item.setText(0, cinema_text)
 
             for hall_name in cinema.get_halls():
                 hall: Hall = cinema.get_hall(hall_name)
                 hall_tree_item = QTreeWidgetItem(cinema_tree_item)
-                hall_text = hall.get_name()
+                hall_text = ' '.join(('Зал', hall.get_name()))
                 hall_tree_item.setText(0, hall_text)
 
                 for session_name in hall.get_sessions():
                     session = hall.get_session(session_name)
                     session_tree_item = QTreeWidgetItem(hall_tree_item)
-                    session_text = session.get_name()
+                    session_text = ' '.join(('Сеанс', session.get_name()))
                     session_tree_item.setText(0, session_text)
 
     def show_warning_add_message(self, text):
